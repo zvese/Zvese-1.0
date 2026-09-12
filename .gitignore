@@ -1,0 +1,74 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.idea
+.vscode
+
+# Supabase local runtime
+/supabase/.temp/
+/supabase/.branches/
+
+# Local verification artifacts
+/cross-seller-result.txt
+/cross-seller-test.txt
+/direct-read-result.txt
+/replacement-attack.txt
+/replacement-result.txt
+/seller-a-real-test.txt
+/seller-a-test.txt
+/seller-a-upload-result.txt
+/seller-validation-attempt.txt
+/trusted-validation-debug-result.txt
+/trusted-validation-debug.json
+/trusted-validation-final-result.txt
+/trusted-validation-final.json
+/trusted-validation-result.txt
+/trusted-validation.json
+/trusted-vault-check.txt
+/trusted-worker-source.txt
+/unreserved-result.txt
+/validated-direct-result.txt
+/validation-body.json
+/vault-upload-result.json
+/vault-upload-result.txt
+/verified-source-download.txt
+/verified-vault-download.txt
