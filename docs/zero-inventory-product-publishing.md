@@ -8,6 +8,18 @@ Products retain canonical descriptions; listings retain seller/product ownership
 
 Historical inventory_quantity/inventory_mode columns remain for compatibility. New listings always write 0/external. No application availability query or publishing decision reads them. They confer no stock ownership, publication or availability rights.
 
+### Manual product moderation MVP
+
+`/admin/products` lists only submitted pending-review listings, with pagination. `/admin/products/[id]` shows the current immutable submitted snapshot, seller/product/listing status, revision/hash identity and attachment validation summary. Both pages require active super_admin membership; seller_reviewer membership alone is insufficient. No change to existing seller-review permissions is made.
+
+The detail form uses a Next Server Action encrypted closure containing the listing ID, reviewed revision, both canonical fingerprints and a server-generated job UUID. Repeated submission of that form retains the job UUID; opening a new form creates a new job, while the existing database unique decision-per-revision constraint still prevents two decisions. The action reauthenticates, rejects seller/creator self-review, verifies the exact current revision/file set, checks active seller status, and rechecks moderator membership immediately before the service-only review RPC. No publication columns are updated directly and no grants change.
+
+Manual provenance is constructed on the server. The authenticated moderator ID, internal note, policy version, current assessment time and an internal evidence reference are stored in the existing immutable product_review_events.provenance JSON. Browser fields supply only the intended decision, availability choice and note. Keep availability as checking unless the moderator has a real basis for another state; an approved listing with checking availability is visible under the existing public predicate without claiming verified availability.
+
+Attachment-free listings can be approved. Any missing, pending, failed or mismatched-version file blocks approval; rejection remains possible. The database independently checks all validated vault requirements. This feature does not implement trusted file inspection or change file access rules. Decision completion revalidates admin product pages, seller account/listing pages and marketplace list/detail pages.
+
+Local verification: sign in as an active seller, create and submit a listing without files; sign in separately as an active super_admin who owns neither the seller nor product; open `/admin/products`, inspect its revision, leave availability as checking, enter an honest review note and approve. In an anonymous browser verify `/marketplace` and its product detail display it. Repeat with rejection and confirm absence; repeat with seller suspension and confirm the approved listing loses public eligibility. Test a stale open form after a revised submission and two simultaneous decisions. Use only a disposable local database and local credentials. `supabase/tests/product_moderation.sql` covers attachment-free decisions and public RLS in a rollback-only transaction; `tests/product-review.test.mjs` covers application authorization, self-review, immutable inputs and safe RPC error handling. No new migration is required for this workflow.
+
 ### Schema
 
 - listings: availability_mode=source_managed; availability_state=checking/available/unavailable; review_state=legacy_unreviewed/draft/pending_review/approved/rejected/withdrawn; current_revision; draft_epoch; submitted_at; reviewed_at; deleted_at.

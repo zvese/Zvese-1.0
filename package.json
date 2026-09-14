@@ -7,7 +7,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint src tests next.config.ts eslint.config.mjs postcss.config.mjs tailwind.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
