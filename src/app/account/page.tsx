@@ -86,6 +86,7 @@ export default async function AccountPage({
         </div>
 
         <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm"><Link href="/account/orders">Your orders</Link></Button>
           <Button asChild variant="outline" size="sm">
             <Link href="/account/messages">
               <MailIcon className="size-4" />
@@ -254,6 +255,7 @@ export default async function AccountPage({
                     <Button asChild variant="outline" size="sm">
                       <Link href="/marketplace">Marketplace</Link>
                     </Button>
+                    <Button asChild variant="outline" size="sm"><Link href="/account/orders/sales">Your sales</Link></Button>
                   </div>
                 </div>
 

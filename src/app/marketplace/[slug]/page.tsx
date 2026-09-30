@@ -4,6 +4,7 @@ import { ArrowLeftIcon, StoreIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getListingByProductSlug } from "@/lib/marketplace/products";
 import { ProductMedia } from "@/components/marketplace/product-media";
+import { canBuy } from "@/lib/orders/checkout";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dynamic metadata
@@ -47,7 +48,7 @@ export async function generateMetadata({
 function formatAvailability(state: "checking" | "available" | "unavailable", reviewState: string) {
   if (reviewState === "legacy_unreviewed") return { label: "Legacy listing: source availability has not been verified", available: false };
   return {
-    label: state === "available" ? "Available through fulfillment partner" : state === "unavailable" ? "Currently unavailable from source" : "Source availability awaits verification",
+    label: state === "available" ? "Available through fulfillment partner" : state === "unavailable" ? "Currently unavailable from source" : "Availability is being verified",
     available: state === "available",
   };
 }
@@ -164,6 +165,12 @@ export default async function ListingDetailPage({
           >
             {availability.label}
           </p>
+
+          <div className="mt-5">
+            {canBuy(listing.availability_state, listing.review_state) ? (
+              <Button asChild><Link href={`/checkout/${listing.id}`}>Buy now</Link></Button>
+            ) : <Button disabled>Buy now</Button>}
+          </div>
 
           {/* Description */}
           {listing.product.description && (
