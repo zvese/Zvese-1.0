@@ -7,15 +7,16 @@ import { isUuid } from "@/lib/admin/seller-review-data";
 import { requireProductModerator, loadProductReview } from "@/lib/admin/product-review-server";
 import { hasUnvalidatedFiles, isSelfReview, type ReviewContext } from "@/lib/admin/product-review";
 import { decideProduct } from "../actions";
+import { validateImage } from "../validate-image";
 
 export const metadata: Metadata = { title: "Review Product | Admin" };
 
 export default async function ProductReviewDetail({ params, searchParams }: {
   params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }>;
 }) {
-  const actor = await requireProductModerator();
   const { id } = await params;
   if (!isUuid(id)) notFound();
+  const actor = await requireProductModerator(`/admin/products/${id}`);
   const record = await loadProductReview(id);
   if (!record) notFound();
   const pageError = (await searchParams).error;
@@ -61,9 +62,14 @@ export default async function ProductReviewDetail({ params, searchParams }: {
           <p>{status?.name ?? file.id} · {file.visibility} · {file.mime_type} · {file.size_bytes} bytes</p>
           <p>Trusted validation: {status?.validation ?? "missing"} · Upload: {status?.reservation ?? "missing"}</p>
           <p className="break-all text-xs">Submitted file: {file.id} · Version: {file.storage_version}</p>
+          {canDecide && status?.validation === "pending" && ["image/jpeg", "image/png", "image/webp"].includes(file.mime_type) && <form action={validateImage} className="mt-2">
+            <input type="hidden" name="listing_id" value={id} /><input type="hidden" name="file_id" value={file.id} />
+            <Button type="submit" variant="outline" size="sm">Validate image bytes and preserve verified copy</Button>
+          </form>}
         </li>;
       })}</ul>
       {filesBlocked && <p className="mt-3 text-destructive">Approval is blocked until every submitted file passes trusted validation. Rejection remains available.</p>}
+      <p className="mt-3 text-sm">The image validator supports static JPEG, PNG and WebP only. It fully decodes bounded image data; it is not an antivirus scan. Videos and documents need a separate trusted validator.</p>
     </div>
     {selfReview && <p role="alert">You cannot review your own product or seller listing.</p>}
     {!canDecide && !selfReview && <p>This submission is no longer eligible for a decision. Check its review and seller status.</p>}

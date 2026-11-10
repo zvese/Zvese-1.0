@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { signInPath } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
 
 export const SELLER_REVIEWER_ROLES = [
@@ -18,14 +19,14 @@ function isSellerReviewerRole(value: string): value is SellerReviewerRole {
   return SELLER_REVIEWER_ROLES.some((role) => role === value);
 }
 
-export async function requireSellerReviewer() {
+export async function requireSellerReviewer(next = "/admin/sellers") {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/sign-in?message=Please sign in to access seller reviews.");
+    redirect(signInPath(next, "Please sign in to access seller reviews."));
   }
 
   const { data, error } = await supabase

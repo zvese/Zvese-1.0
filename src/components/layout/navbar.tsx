@@ -1,9 +1,8 @@
-"use client";
-
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
+import { CartLink } from "@/components/cart/cart-link";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -13,16 +12,24 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { siteConfig } from "@/config/site";
+import { getCurrentSellerProfile } from "@/lib/marketplace/sellers";
+import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-const navLinks = [
-  { label: "Marketplace", href: siteConfig.links.marketplace },
-  { label: "Creators", href: siteConfig.links.creators },
-  { label: "About", href: siteConfig.links.about },
-  { label: "Contact", href: siteConfig.links.contact },
-] as const;
+export async function Navbar() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const sellerProfile = user ? (await getCurrentSellerProfile()).data : null;
+  const isActiveSeller = sellerProfile?.status === "active";
+  const navLinks = [
+    { label: "Marketplace", href: siteConfig.links.marketplace },
+    isActiveSeller
+      ? { label: "Seller Dashboard", href: "/account#seller-dashboard" }
+      : { label: "Creators", href: siteConfig.links.creators },
+    { label: "About", href: siteConfig.links.about },
+    { label: "Contact", href: siteConfig.links.contact },
+  ];
 
-export function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -41,15 +48,24 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
+          <CartLink className="text-sm text-muted-foreground transition-colors hover:text-primary" />
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link href="/sign-up">Get started</Link>
-          </Button>
+          {user ? (
+            <Button size="sm" asChild>
+              <Link href="/account#profile">{isActiveSeller ? "Profile" : "Account"}</Link>
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/sign-in">Sign in</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/sign-up">Get started</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         <Sheet>
@@ -80,14 +96,28 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <CartLink
+                className={cn(
+                  "rounded-md px-3 py-2.5 text-base text-foreground",
+                  "transition-colors hover:bg-accent hover:text-accent-foreground"
+                )}
+              />
             </nav>
             <div className="mt-6 flex flex-col gap-2">
-              <Button variant="outline" asChild>
-                <Link href="/sign-in">Sign in</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/sign-up">Get started</Link>
-              </Button>
+              {user ? (
+                <Button asChild>
+                  <Link href="/account#profile">{isActiveSeller ? "Profile" : "Account"}</Link>
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" asChild>
+                    <Link href="/sign-in">Sign in</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link href="/sign-up">Get started</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </SheetContent>
         </Sheet>

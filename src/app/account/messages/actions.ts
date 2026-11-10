@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { isUuid } from "@/lib/admin/seller-review-data";
+import { signInPath } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
 
 export async function markNotificationRead(formData: FormData) {
@@ -19,7 +20,7 @@ export async function markNotificationRead(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/sign-in?message=Please sign in to view your messages.");
+    redirect(signInPath("/account/messages", "Please sign in to view your messages."));
   }
 
   const { error } = await supabase.rpc("mark_notification_read", {

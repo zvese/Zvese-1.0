@@ -5,6 +5,7 @@ import { ArrowLeftIcon, CheckIcon, MailIcon, MailOpenIcon } from "lucide-react";
 
 import { markNotificationRead } from "@/app/account/messages/actions";
 import { Button } from "@/components/ui/button";
+import { signInPath } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -40,7 +41,7 @@ export default async function AccountMessagesPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/sign-in?message=Please sign in to view your messages.");
+    redirect(signInPath("/account/messages", "Please sign in to view your messages."));
   }
 
   const { data, error: notificationsError } = await supabase

@@ -13,6 +13,7 @@ import {
 
 import { signOut } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
+import { signInPath } from "@/lib/auth/redirects";
 import {
   getCurrentSellerDecisionNotice,
   getCurrentSellerProfile,
@@ -35,7 +36,7 @@ export default async function AccountPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/sign-in?message=Please sign in to continue.");
+    redirect(signInPath("/account", "Please sign in to continue."));
   }
 
   const { count: unreadCount, error: unreadCountError } = await supabase
@@ -114,7 +115,7 @@ export default async function AccountPage({
 
       <div className="mt-10 grid gap-8">
         {/* Seller / Creator Status Card */}
-        <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs">
+        <div id="seller-dashboard" className="scroll-mt-24 rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs">
           <div className="flex items-center justify-between border-b border-border pb-5">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -323,7 +324,7 @@ export default async function AccountPage({
         </div>
 
         {/* Profile Details Card */}
-        <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs">
+        <div id="profile" className="scroll-mt-24 rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs">
           <h2 className="text-lg font-semibold text-foreground">
             Account Profile
           </h2>

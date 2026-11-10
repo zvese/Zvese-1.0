@@ -2,89 +2,111 @@
 
 import { redirect } from "next/navigation";
 
+import { signedInDestination } from "@/lib/auth/destination";
+import { safeNextPath, withAuthParams } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
 
-function authRedirect(path: string, key: "error" | "message", value: string) {
-  return `${path}?${new URLSearchParams({ [key]: value }).toString()}`;
-}
-
-function verifyRedirect(email: string, key: "error" | "message", value: string) {
-  const params = new URLSearchParams({ email, [key]: value });
-  return `/auth/verify?${params.toString()}`;
+function nextFrom(formData: FormData) {
+  return safeNextPath(formData.get("next"));
 }
 
 export async function signIn(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const next = nextFrom(formData);
 
   if (!email || !password) {
-    redirect(authRedirect("/sign-in", "error", "Enter your email and password."));
+    redirect(withAuthParams("/sign-in", {
+      error: "Enter your email and password.",
+      next,
+    }));
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) {
-    redirect(authRedirect("/sign-in", "error", "We could not sign you in. Check your details and try again."));
+  if (error || !data.user) {
+    redirect(withAuthParams("/sign-in", {
+      error: "We could not sign you in. Check your details and try again.",
+      next,
+    }));
   }
 
-  redirect("/account");
+  redirect(await signedInDestination(supabase, data.user, next));
 }
 
 export async function signUp(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const next = nextFrom(formData);
 
   if (!email || password.length < 8) {
-    redirect(authRedirect("/sign-up", "error", "Use a valid email and a password of at least 8 characters."));
+    redirect(withAuthParams("/sign-up", {
+      error: "Use a valid email and a password of at least 8 characters.",
+      next,
+    }));
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
+  const { data, error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
-    redirect(authRedirect("/sign-up", "error", "We could not create your account. Please try again."));
+    redirect(withAuthParams("/sign-up", {
+      error: "We could not create your account. Please try again.",
+      next,
+    }));
   }
 
-  if (data.session) {
-    redirect("/account");
+  if (data.session && data.user) {
+    redirect(await signedInDestination(supabase, data.user, next));
   }
 
-  // Email confirmation required — send the user to the OTP verification page.
-  // The email address is passed via query string so no password is exposed.
-  redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
+  // Email confirmation required; only the address and safe destination continue.
+  redirect(withAuthParams("/auth/verify", { email, next }));
 }
 
 export async function verifyOtp(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const token = String(formData.get("token") ?? "").trim();
+  const next = nextFrom(formData);
 
   if (!email || !token) {
-    redirect(verifyRedirect(email, "error", "Enter the verification code sent to your email."));
+    redirect(withAuthParams("/auth/verify", {
+      email,
+      error: "Enter the verification code sent to your email.",
+      next,
+    }));
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
 
   if (error) {
     const message = /expired|invalid/i.test(error.message)
       ? "That code is invalid or has expired. Request a new one or try again."
       : "We could not verify that code. Please try again.";
-    redirect(verifyRedirect(email, "error", message));
+    redirect(withAuthParams("/auth/verify", { email, error: message, next }));
   }
 
-  // Session established by verifyOtp — no password needed again.
-  redirect("/account");
+  if (!data.user) {
+    redirect(withAuthParams("/sign-in", {
+      error: "Your email was verified, but a session could not be started. Please sign in.",
+      next,
+    }));
+  }
+
+  redirect(await signedInDestination(supabase, data.user, next));
 }
 
 export async function resendOtp(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
+  const next = nextFrom(formData);
 
   if (!email) {
-    redirect(authRedirect("/auth/verify", "error", "We need your email to resend a code."));
+    redirect(withAuthParams("/auth/verify", {
+      error: "We need your email to resend a code.",
+      next,
+    }));
   }
 
   const supabase = await createClient();
@@ -94,10 +116,14 @@ export async function resendOtp(formData: FormData) {
     const message = /rate/i.test(error.message)
       ? "You requested a code too recently. Please wait a moment and try again."
       : "We could not resend the code. Please try again.";
-    redirect(verifyRedirect(email, "error", message));
+    redirect(withAuthParams("/auth/verify", { email, error: message, next }));
   }
 
-  redirect(verifyRedirect(email, "message", "A new verification code has been sent to your email."));
+  redirect(withAuthParams("/auth/verify", {
+    email,
+    message: "A new verification code has been sent to your email.",
+    next,
+  }));
 }
 
 export async function signOut() {

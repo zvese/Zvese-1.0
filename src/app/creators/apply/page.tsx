@@ -11,6 +11,8 @@ import {
   getCurrentSellerProfile,
 } from "@/lib/marketplace/sellers";
 import { createClient } from "@/lib/supabase/server";
+import { signInPath } from "@/lib/auth/redirects";
+import { BackButton } from "@/components/navigation/back-button";
 
 export const metadata: Metadata = {
   title: "Apply to Sell | Creators",
@@ -28,7 +30,7 @@ export default async function ApplyPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/sign-in?message=Please sign in to apply as a seller.");
+    redirect(signInPath("/creators/apply", "Please sign in to apply as a seller."));
   }
 
   const { data: sellerProfile } = await getCurrentSellerProfile();
@@ -182,6 +184,7 @@ export default async function ApplyPage({
   // User has no seller profile -> Show application form
   return (
     <section className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+      <BackButton fallback="/creators" />
       <div className="mb-8">
         <p className="text-sm font-medium text-primary">Zvese Creator Program</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">

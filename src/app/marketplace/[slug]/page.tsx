@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getListingByProductSlug } from "@/lib/marketplace/products";
 import { ProductMedia } from "@/components/marketplace/product-media";
 import { canBuy } from "@/lib/orders/checkout";
+import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dynamic metadata
@@ -90,6 +91,7 @@ export default async function ListingDetailPage({
   }).format(listing.price_minor / 100);
 
   const availability = formatAvailability(listing.availability_state, listing.review_state);
+  const availableToBuy = canBuy(listing.availability_state, listing.review_state);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
@@ -166,10 +168,21 @@ export default async function ListingDetailPage({
             {availability.label}
           </p>
 
-          <div className="mt-5">
-            {canBuy(listing.availability_state, listing.review_state) ? (
+          <div className="mt-5 flex flex-wrap gap-3">
+            {availableToBuy ? (
               <Button asChild><Link href={`/checkout/${listing.id}`}>Buy now</Link></Button>
             ) : <Button disabled>Buy now</Button>}
+            <AddToCartButton
+              disabled={!availableToBuy}
+              item={{
+                listingId: listing.id,
+                productSlug: listing.product.slug,
+                title: displayTitle,
+                sellerName: listing.seller.store_name,
+                unitPriceMinor: listing.price_minor,
+                currency: listing.currency,
+              }}
+            />
           </div>
 
           {/* Description */}

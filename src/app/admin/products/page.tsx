@@ -6,7 +6,7 @@ import { requireProductModerator, loadProductReview } from "@/lib/admin/product-
 export const metadata: Metadata = { title: "Product Reviews | Admin" };
 
 export default async function ProductReviewQueue({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  await requireProductModerator();
+  await requireProductModerator("/admin/products");
   const requested = Number((await searchParams).page ?? 1);
   const page = Number.isSafeInteger(requested) && requested > 0 && requested <= 10000 ? requested : 1;
   const system = createProductSystemClient();
@@ -17,6 +17,7 @@ export default async function ProductReviewQueue({ searchParams }: { searchParam
   const records = await Promise.all((data ?? []).map((row) => loadProductReview(row.id)));
   const pending = records.filter((record) => record && record.reviewState === "pending_review" && !record.deletedAt);
   return <section className="mx-auto max-w-5xl px-4 py-12">
+    <Link className="text-sm underline" href="/admin/sourcing">AI sourcing workspace</Link>
     <h1 className="text-3xl font-bold">Product reviews</h1>
     <p className="mt-3 text-muted-foreground">Submitted product revisions awaiting manual review. Only active super administrators can decide them.</p>
     {pending.length === 0 && <p className="mt-8">No pending submissions on this page.</p>}

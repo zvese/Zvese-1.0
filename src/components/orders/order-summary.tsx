@@ -19,7 +19,7 @@ export function OrderSummary({ order, admin = false, destination = false }: { or
       <p>{item.product_name} · {item.seller_name}</p>
       <p className="text-sm">{item.quantity} × {money(item.unit_price, item.currency)} = {money(item.line_total, item.currency)}</p>
     </li>)}</ul>
-    <p className="font-semibold">Total: {money(order.subtotal, order.currency)} {order.currency}</p>
+    <p className="font-semibold">Product subtotal: {money(order.subtotal, order.currency)} {order.currency}</p>
     {destination && <DeliverySummary delivery={order} />}
   </article>;
 }

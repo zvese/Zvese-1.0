@@ -6,6 +6,7 @@ import {
   isSupportedCountryCode,
   isSupportedCurrencyCode,
 } from "@/config/marketplace-options";
+import { signInPath } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
 
 const STORE_SLUG_REGEX = /^(?!.*\.\.)[a-z0-9_](?:[a-z0-9._]*[a-z0-9_])?$/;
@@ -64,7 +65,7 @@ export async function applyForSellerProfile(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/sign-in?message=Please sign in to apply as a creator.");
+    redirect(signInPath("/creators/apply", "Please sign in to apply as a creator."));
   }
 
   // Prevent duplicate seller applications

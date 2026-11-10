@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { resendOtp, verifyOtp } from "@/app/auth/actions";
+import { BackButton } from "@/components/navigation/back-button";
 import { Button } from "@/components/ui/button";
 import { VerifySubmitButton } from "@/components/auth/verify-submit-button";
+import { signedInDestination } from "@/lib/auth/destination";
+import { safeNextPath, withAuthParams } from "@/lib/auth/redirects";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Verify your email",
@@ -13,12 +18,18 @@ export const metadata: Metadata = {
 export default async function VerifyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string; error?: string; message?: string }>;
+  searchParams: Promise<{ email?: string; error?: string; message?: string; next?: string }>;
 }) {
-  const { email = "", error, message } = await searchParams;
+  const { email = "", error, message, next: requestedNext } = await searchParams;
+  const next = safeNextPath(requestedNext);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) redirect(await signedInDestination(supabase, user, next));
 
   return (
     <div className="mx-auto flex max-w-md flex-col px-4 py-16 sm:px-6">
+      <div className="mb-6 self-start"><BackButton fallback="/sign-up" /></div>
       <h1 className="text-3xl font-bold tracking-tight">Check your email</h1>
       <p className="mt-3 text-muted-foreground">
         We sent a verification code to{" "}
@@ -36,6 +47,7 @@ export default async function VerifyPage({
         <>
           <form action={verifyOtp} className="mt-8 space-y-5">
             <input type="hidden" name="email" value={email} />
+            {next ? <input type="hidden" name="next" value={next} /> : null}
             <label className="block text-sm font-medium">
               Verification code
               <input
@@ -54,6 +66,7 @@ export default async function VerifyPage({
 
           <form action={resendOtp} className="mt-4">
             <input type="hidden" name="email" value={email} />
+            {next ? <input type="hidden" name="next" value={next} /> : null}
             <VerifySubmitButton pendingText="Sending…" variant="outline">
               Resend code
             </VerifySubmitButton>
@@ -62,7 +75,7 @@ export default async function VerifyPage({
       ) : (
         <div className="mt-8 flex flex-wrap gap-3">
           <Button asChild variant="outline">
-            <Link href="/sign-up">Back to sign up</Link>
+            <Link href={withAuthParams("/sign-up", { next })}>Back to sign up</Link>
           </Button>
         </div>
       )}

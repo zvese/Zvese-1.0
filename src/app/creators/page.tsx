@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRightIcon, SparklesIcon, ShieldCheckIcon, GlobeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getCurrentSellerProfile } from "@/lib/marketplace/sellers";
 
 export const metadata: Metadata = {
   title: "Creators",
@@ -26,7 +27,10 @@ const perks = [
   },
 ];
 
-export default function CreatorsPage() {
+export default async function CreatorsPage() {
+  const { data: sellerProfile } = await getCurrentSellerProfile();
+  const isActiveSeller = sellerProfile?.status === "active";
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl text-center">
@@ -40,8 +44,12 @@ export default function CreatorsPage() {
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button size="lg" asChild>
-            <Link href="/creators/apply">
-              Apply to become a seller
+            <Link href={isActiveSeller ? "/account#seller-dashboard" : "/creators/apply"}>
+              {isActiveSeller
+                ? "Seller Dashboard"
+                : sellerProfile
+                  ? "View seller status"
+                  : "Apply to become a seller"}
               <ArrowRightIcon className="size-4" />
             </Link>
           </Button>

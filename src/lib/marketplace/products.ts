@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createCatalogClient } from "@/lib/supabase/catalog";
 import type { Category } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -178,30 +178,26 @@ export async function getActiveMarketplaceListings(
   data: MarketplaceListing[] | null;
   error: Error | null;
 }> {
-  const supabase = await createClient();
+  const supabase = createCatalogClient();
 
-  let query = supabase
+  const { data, error } = await supabase
     .from("listings")
     .select(LISTING_SELECT)
     .eq("status", "active")
-    .in("review_state", ["approved", "legacy_unreviewed"])
+    .eq("review_state", "approved")
     .eq("product.status", "active")
     .eq("seller.status", "active")
     .order("created_at", { ascending: false });
-
-  if (categorySlug) {
-    // Filter by the slug of the joined category on the product
-    query = query.eq("product.category.slug", categorySlug);
-  }
-
-  const { data, error } = await query;
 
   if (error || !data) {
     return { data: null, error: error ? new Error(error.message) : null };
   }
 
   const listings = (data as unknown as RawListingRow[]).map(normaliseListing);
-  return { data: listings, error: null };
+  const filtered = categorySlug
+    ? listings.filter((listing) => listing.product.category?.slug === categorySlug)
+    : listings;
+  return { data: filtered, error: null };
 }
 
 /**
@@ -212,13 +208,13 @@ export async function getListingByProductSlug(slug: string): Promise<{
   data: MarketplaceListing | null;
   error: Error | null;
 }> {
-  const supabase = await createClient();
+  const supabase = createCatalogClient();
 
   const { data, error } = await supabase
     .from("listings")
     .select(LISTING_SELECT)
     .eq("status", "active")
-    .in("review_state", ["approved", "legacy_unreviewed"])
+    .eq("review_state", "approved")
     .eq("product.status", "active")
     .eq("seller.status", "active")
     .eq("product.slug", slug)
@@ -243,7 +239,7 @@ export async function getActiveCategories(): Promise<{
   data: Category[] | null;
   error: Error | null;
 }> {
-  const supabase = await createClient();
+  const supabase = createCatalogClient();
 
   const { data, error } = await supabase
     .from("categories")

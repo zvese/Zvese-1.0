@@ -63,7 +63,7 @@ export default async function AdminSellerReviewPage({
 }) {
   const { id } = await params;
   const { message, error: pageError } = await searchParams;
-  const { supabase, user } = await requireSellerReviewer();
+  const { supabase, user } = await requireSellerReviewer(`/admin/sellers/${id}`);
 
   if (!isUuid(id)) {
     notFound();

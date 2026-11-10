@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { signInPath } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
 import { createProductSystemClient } from "@/lib/supabase/product-system";
 import { isProductModerator, type ProductModerator, type ProductReviewRecord } from "./product-review";
@@ -12,7 +13,10 @@ export async function getProductModerator(): Promise<ProductModerator | null> {
   if (error || !data || data.user_id !== user.id) return null;
   return { id: user.id, role: data.role, isActive: data.is_active };
 }
-export async function requireProductModerator() {
+export async function requireProductModerator(next = "/admin/products") {
+  const session = await createClient();
+  const { data: { user } } = await session.auth.getUser();
+  if (!user) redirect(signInPath(next, "Please sign in to access product reviews."));
   const actor = await getProductModerator();
   if (!isProductModerator(actor)) redirect("/account?error=Active%20super%20administrator%20access%20required.");
   return actor;

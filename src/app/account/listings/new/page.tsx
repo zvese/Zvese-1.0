@@ -6,13 +6,15 @@ import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/admin/seller-review-data";
 import { PRODUCT_FILE_SELECT, type ProductFile } from "@/lib/marketplace/product-files";
 import { ListingForm, type ListingDraft } from "./listing-form";
+import { signInPath } from "@/lib/auth/redirects";
+import { BackButton } from "@/components/navigation/back-button";
 
 export const metadata: Metadata = { title: "Create Listing | Zvese", description: "Prepare a source-managed product for review." };
 
 export default async function NewListingPage({ searchParams }: { searchParams: Promise<{ draft?: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in?message=Please sign in to create listings.");
+  if (!user) redirect(signInPath("/account/listings/new", "Please sign in to create listings."));
   const { data: seller } = await getCurrentSellerProfile();
   if (!seller || seller.status !== "active") return (
     <section className="mx-auto max-w-2xl px-4 py-16">
@@ -46,6 +48,7 @@ export default async function NewListingPage({ searchParams }: { searchParams: P
     files = (storedFiles ?? []) as ProductFile[];
   }
   return <section className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+    <BackButton fallback="/account" />
     <p className="text-sm text-primary">{seller.store_name}</p>
     <h1 className="mt-1 text-3xl font-bold">{draft ? "Your product listing" : "Create a listing"}</h1>
     <p className="mt-2 text-muted-foreground">Add product and source details, upload files, then submit for review.</p>

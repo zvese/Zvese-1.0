@@ -1,16 +1,20 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { signInPath } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
 import { getProductModerator } from "@/lib/admin/product-review-server";
 
-export async function requireBuyer() {
+export async function requireBuyer(next = "/account/orders") {
   const client = await createClient();
   const { data: { user }, error } = await client.auth.getUser();
-  if (error || !user) redirect("/sign-in?message=Sign%20in%20to%20place%20or%20view%20orders.");
+  if (error || !user) redirect(signInPath(next, "Sign in to place or view orders."));
   return { client, user };
 }
 
-export async function requireOrderAdmin() {
+export async function requireOrderAdmin(next = "/admin/orders") {
+  const client = await createClient();
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) redirect(signInPath(next, "Please sign in to access order administration."));
   const actor = await getProductModerator();
   if (!actor || actor.role !== "super_admin" || !actor.isActive) redirect("/account?error=Active%20super%20administrator%20access%20required.");
 }

@@ -31,7 +31,7 @@ export default async function AdminSellerQueuePage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { supabase, membership } = await requireSellerReviewer();
+  const { supabase, membership } = await requireSellerReviewer("/admin/sellers");
   const { error: pageError } = await searchParams;
 
   const { data: sellerRows, error: sellerError } = await supabase

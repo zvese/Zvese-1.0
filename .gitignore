@@ -72,3 +72,7 @@ next-env.d.ts
 /vault-upload-result.txt
 /verified-source-download.txt
 /verified-vault-download.txt
+
+# Private deployment environment files
+.env.*
+!.env.example

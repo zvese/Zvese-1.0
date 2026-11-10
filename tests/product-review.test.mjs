@@ -99,7 +99,7 @@ test("pages/actions keep privileged values in the encrypted closure and use only
   const page = read("src/app/admin/products/[id]/page.tsx");
   const queue = read("src/app/admin/products/page.tsx");
   const action = read("src/app/admin/products/actions.ts");
-  assert.match(page, /await requireProductModerator\(\)/);
+  assert.match(page, /await requireProductModerator\(`\/admin\/products\/\$\{id\}`\)/);
   assert.match(page, /jobId: randomUUID\(\)/);
   assert.match(page, /"use server";\s*await decideProduct\(context, form\)/);
   assert.match(queue, /\.eq\("review_state", "pending_review"\)/);

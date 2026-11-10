@@ -30,6 +30,9 @@
 }
 
 :root {
+  /* System fonts keep production builds independent of third-party font downloads. */
+  --font-geist-sans: Arial, Helvetica, sans-serif;
+  --font-geist-mono: Consolas, "Courier New", monospace;
   --radius: 0.625rem;
 
   /* Zvese brand palette */
