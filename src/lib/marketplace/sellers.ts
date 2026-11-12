@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SellerProfile } from "@/types";
+import { cache } from "react";
+import { getPageUser } from "@/lib/auth/page-user";
 
 export interface SellerApplicationDecisionNotice {
   decision: "approve" | "reject" | "hold" | "reopen";
@@ -9,14 +11,14 @@ export interface SellerApplicationDecisionNotice {
   decided_at: string;
 }
 
-export async function getCurrentSellerProfile(): Promise<{
+export const getCurrentSellerProfile = cache(async (): Promise<{
   data: SellerProfile | null;
   error: Error | null;
-}> {
+}> => {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getPageUser();
 
   if (!user) {
     return { data: null, error: null };
@@ -33,7 +35,7 @@ export async function getCurrentSellerProfile(): Promise<{
   }
 
   return { data: data as SellerProfile | null, error: null };
-}
+});
 
 export async function getCurrentSellerDecisionNotice(): Promise<{
   data: SellerApplicationDecisionNotice | null;
@@ -42,7 +44,7 @@ export async function getCurrentSellerDecisionNotice(): Promise<{
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getPageUser();
 
   if (!user) {
     return { data: null, error: null };

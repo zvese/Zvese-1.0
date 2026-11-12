@@ -1,5 +1,7 @@
 import { createCatalogClient } from "@/lib/supabase/catalog";
 import type { Category } from "@/types";
+import { cache } from "react";
+import { CATALOG_PAGE_SIZE, catalogPage, containsPattern, quotedFilter } from "./catalog-query";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared types
@@ -166,48 +168,60 @@ const LISTING_SELECT = `
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Fetches all active marketplace listings (active listing + active seller +
+ * Fetches one bounded page of marketplace listings (active listing + active seller +
  * active product enforced by Supabase RLS).
  *
  * @param categorySlug  When provided, filters listings whose product belongs
  *                      to the category with this slug.
  */
 export async function getActiveMarketplaceListings(
-  categorySlug?: string
+  categorySlug?: string, searchQuery = "", requestedPage = 1
 ): Promise<{
   data: MarketplaceListing[] | null;
   error: Error | null;
+  hasNext: boolean;
 }> {
   const supabase = createCatalogClient();
 
-  const { data, error } = await supabase
+  const term = searchQuery.trim().slice(0, 100);
+  const page = catalogPage(requestedPage);
+  const select = categorySlug ? LISTING_SELECT.replace("category:categories (", "category:categories!inner (") : LISTING_SELECT;
+  let query = supabase
     .from("listings")
-    .select(LISTING_SELECT)
+    .select(select + (term ? ",product_search:products(),seller_search:seller_profiles()" : ""))
     .eq("status", "active")
     .eq("review_state", "approved")
     .eq("product.status", "active")
     .eq("seller.status", "active")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }).order("id");
+  if (categorySlug) query = query.eq("product.category.slug", categorySlug);
+  if (term) {
+    const pattern = containsPattern(term), quoted = quotedFilter(pattern);
+    query = query.or(`title.imatch.${quoted},description.imatch.${quoted},brand.imatch.${quoted}`, { referencedTable: "product_search" })
+      .filter("seller_search.store_name", "imatch", pattern)
+      .or(`title.imatch.${quoted},product_search.not.is.null,seller_search.not.is.null`);
+  }
+  const { data, error } = await query.range((page - 1) * CATALOG_PAGE_SIZE, page * CATALOG_PAGE_SIZE);
 
   if (error || !data) {
-    return { data: null, error: error ? new Error(error.message) : null };
+    return { data: null, error: error ? new Error(error.message) : null, hasNext: false };
   }
 
-  const listings = (data as unknown as RawListingRow[]).map(normaliseListing);
+  const listings = (data as unknown as RawListingRow[]).slice(0, CATALOG_PAGE_SIZE).map(normaliseListing);
   const filtered = categorySlug
     ? listings.filter((listing) => listing.product.category?.slug === categorySlug)
     : listings;
-  return { data: filtered, error: null };
+  return { data: filtered, error: null, hasNext: data.length > CATALOG_PAGE_SIZE };
 }
 
 /**
  * Fetches a single active listing by its product slug.
  * Returns null (not an error) when no matching active listing exists.
  */
-export async function getListingByProductSlug(slug: string): Promise<{
+export const getListingByProductSlug = cache(async (slug: string): Promise<{
   data: MarketplaceListing | null;
   error: Error | null;
-}> {
+}> => {
   const supabase = createCatalogClient();
 
   const { data, error } = await supabase
@@ -229,7 +243,7 @@ export async function getListingByProductSlug(slug: string): Promise<{
   }
 
   return { data: normaliseListing(data as unknown as RawListingRow), error: null };
-}
+});
 
 /**
  * Fetches all active categories, ordered alphabetically.

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SearchIcon } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
+import { ProductCardImage } from "@/components/marketplace/product-card-image";
 import { Button } from "@/components/ui/button";
 import {
   getActiveCategories,
@@ -9,6 +9,9 @@ import {
 } from "@/lib/marketplace/products";
 import { filterMarketplaceListings } from "@/lib/marketplace/search";
 import { canBuy } from "@/lib/orders/checkout";
+import { getPublicCardImages } from "@/lib/marketplace/public-card-images";
+import { catalogPage } from "@/lib/marketplace/catalog-query";
+import { MarketplaceSearch } from "@/components/marketplace/marketplace-search";
 
 export const metadata: Metadata = {
   title: "Marketplace",
@@ -18,29 +21,37 @@ export const metadata: Metadata = {
 export default async function MarketplacePage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string | string[]; q?: string | string[] }>;
+  searchParams: Promise<{ category?: string | string[]; q?: string | string[]; page?: string }>;
 }) {
-  const { category, q } = await searchParams;
+  const { category, q, page: requestedPage } = await searchParams;
+  const page = catalogPage(requestedPage);
   const categorySlug = typeof category === "string" ? category.trim().slice(0, 160) : undefined;
   const searchQuery = typeof q === "string" ? q.trim().slice(0, 100) : "";
 
-  const [{ data: listings }, { data: categories }] = await Promise.all([
-    getActiveMarketplaceListings(),
+  const [listingResult, categoryResult] = await Promise.allSettled([
+    getActiveMarketplaceListings(categorySlug, searchQuery, page),
     getActiveCategories(),
   ]);
 
+  const listings = listingResult.status === "fulfilled" ? listingResult.value.data : null;
+  const categories = categoryResult.status === "fulfilled" ? categoryResult.value.data : null;
+  const marketplaceUnavailable = listings === null || categories === null;
+
   const activeListings = filterMarketplaceListings(listings ?? [], searchQuery, categorySlug);
   const activeCategories = categories ?? [];
+  const imageIds = marketplaceUnavailable ? {} : await getPublicCardImages(activeListings.map(listing => listing.id));
+  const hasNext = listingResult.status === "fulfilled" && listingResult.value.hasNext;
 
   // Find the active category object for display purposes
   const activeCategory = categorySlug
     ? activeCategories.find((c) => c.slug === categorySlug) ?? null
     : null;
 
-  function marketplaceHref(category?: string, keepSearch = true) {
+  function marketplaceHref(category?: string, keepSearch = true, targetPage = 1) {
     const params = new URLSearchParams();
     if (keepSearch && searchQuery) params.set("q", searchQuery);
     if (category) params.set("category", category);
+    if (targetPage > 1) params.set("page", String(targetPage));
     const query = params.toString();
     return query ? `/marketplace?${query}` : "/marketplace";
   }
@@ -55,23 +66,8 @@ export default async function MarketplacePage({
         Discover products from independent creators and sellers worldwide.
       </p>
 
-      <form action="/marketplace" method="get" className="mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row">
-        {categorySlug ? <input type="hidden" name="category" value={categorySlug} /> : null}
-        <label className="relative flex-1">
-          <span className="sr-only">Search marketplace</span>
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <input
-            name="q"
-            type="search"
-            defaultValue={searchQuery}
-            maxLength={100}
-            placeholder="Search products, brands, or stores"
-            className="h-11 w-full rounded-md border bg-background pl-10 pr-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </label>
-        <Button type="submit" size="lg">Search</Button>
-        {searchQuery ? <Button variant="outline" size="lg" asChild><Link href={marketplaceHref(categorySlug, false)}>Clear</Link></Button> : null}
-      </form>
+      <MarketplaceSearch query={searchQuery} category={categorySlug} />
+      {searchQuery && <Link className="mt-3 inline-block text-sm underline" href={marketplaceHref(categorySlug, false)}>Clear search</Link>}
 
       {/* Category filter strip */}
       <nav
@@ -120,7 +116,14 @@ export default async function MarketplacePage({
       ) : null}
 
       {/* Listing grid / empty state */}
-      {activeListings.length === 0 ? (
+      {marketplaceUnavailable ? (
+        <div className="mt-10 rounded-xl border bg-card p-8" role="status">
+          <h2 className="text-lg font-semibold">Marketplace temporarily unavailable</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We could not load products right now. Please try again later.
+          </p>
+        </div>
+      ) : activeListings.length === 0 ? (
         <div className="mt-10 rounded-xl border bg-card p-8">
           <h2 className="text-lg font-semibold">
             {categorySlug
@@ -148,12 +151,13 @@ export default async function MarketplacePage({
         </div>
       ) : (
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {activeListings.map((listing) => {
+          {activeListings.map((listing, index) => {
             const available = canBuy(listing.availability_state, listing.review_state);
             const title = listing.title || listing.product.title;
             return (
               <article key={listing.id} className="group flex flex-col rounded-xl border bg-card p-6 transition-shadow hover:shadow-md">
-                <Link href={`/marketplace/${listing.product.slug}`} className="flex-1">
+                <Link href={`/marketplace/${listing.product.slug}`} prefetch={false} className="flex-1">
+                <ProductCardImage fileId={imageIds[listing.id]} title={title} priority={index < 3} />
                 <p className="text-sm text-muted-foreground">
                   {listing.seller?.store_name ?? "Zvese creator"}
                 </p>
@@ -176,7 +180,7 @@ export default async function MarketplacePage({
                 </p>
                 </Link>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <Button asChild size="sm"><Link href={`/marketplace/${listing.product.slug}`}>View product</Link></Button>
+                  <Button asChild size="sm"><Link prefetch={false} href={`/marketplace/${listing.product.slug}`}>View product</Link></Button>
                   <AddToCartButton
                     disabled={!available}
                     item={{
@@ -195,6 +199,10 @@ export default async function MarketplacePage({
           })}
         </div>
       )}
+      {!marketplaceUnavailable && <nav aria-label="Marketplace pages" className="mt-8 flex gap-6">
+        {page > 1 && <Link href={marketplaceHref(categorySlug, true, page - 1)}>Previous</Link>}
+        {hasNext && <Link href={marketplaceHref(categorySlug, true, page + 1)}>Next</Link>}
+      </nav>}
     </div>
   );
 }

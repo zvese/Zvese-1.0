@@ -21,6 +21,7 @@ interface CartContextValue {
 }
 
 const CartContext = React.createContext<CartContextValue | null>(null);
+const CartActionsContext = React.createContext<Pick<CartContextValue, "addItem" | "removeItem" | "updateQuantity" | "ready"> | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = React.useState<CartItem[]>([]);
@@ -50,18 +51,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, ready]);
 
-  const value = React.useMemo<CartContextValue>(() => ({
-    items,
-    itemCount: cartItemCount(items),
+  const actions = React.useMemo<Pick<CartContextValue, "addItem" | "removeItem" | "updateQuantity" | "ready">>(() => ({
     ready,
     addItem: (item) => setItems((current) => addCartItem(current, item)),
     removeItem: (listingId) =>
       setItems((current) => current.filter((item) => item.listingId !== listingId)),
     updateQuantity: (listingId, quantity) =>
       setItems((current) => setCartQuantity(current, listingId, quantity)),
-  }), [items, ready]);
+  }), [ready]);
+  const value = React.useMemo<CartContextValue>(() => ({ ...actions, items, itemCount: cartItemCount(items) }), [actions, items]);
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return <CartActionsContext.Provider value={actions}><CartContext.Provider value={value}>{children}</CartContext.Provider></CartActionsContext.Provider>;
+}
+
+export function useCartActions() {
+  const context = React.useContext(CartActionsContext);
+  if (!context) throw new Error("useCartActions must be used inside CartProvider.");
+  return context;
 }
 
 export function useCart() {

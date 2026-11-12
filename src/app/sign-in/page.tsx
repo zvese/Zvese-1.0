@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { signIn } from "@/app/auth/actions";
 import { PasswordInput } from "@/components/auth/password-input";
 import { BackButton } from "@/components/navigation/back-button";
-import { Button } from "@/components/ui/button";
+import { VerifySubmitButton } from "@/components/auth/verify-submit-button";
+import { getPageUser } from "@/lib/auth/page-user";
 import { signedInDestination } from "@/lib/auth/destination";
 import { safeNextPath, withAuthParams } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
@@ -23,7 +24,7 @@ export default async function SignInPage({
   const { error, message, next: requestedNext } = await searchParams;
   const next = safeNextPath(requestedNext);
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getPageUser();
 
   if (user) redirect(await signedInDestination(supabase, user, next));
 
@@ -38,7 +39,7 @@ export default async function SignInPage({
         {next ? <input type="hidden" name="next" value={next} /> : null}
         <label className="block text-sm font-medium" htmlFor="sign-in-email">Email<input id="sign-in-email" name="email" type="email" autoComplete="email" required className="mt-2 w-full rounded-md border bg-background px-3 py-2.5" /></label>
         <div><label className="block text-sm font-medium" htmlFor="sign-in-password">Password</label><PasswordInput id="sign-in-password" name="password" autoComplete="current-password" required /></div>
-        <Button type="submit" className="w-full">Sign in</Button>
+        <VerifySubmitButton pendingText="Signing in…" className="w-full">Sign in</VerifySubmitButton>
       </form>
       <p className="mt-6 text-center text-sm text-muted-foreground">New to Zvese? <Link href={withAuthParams("/sign-up", { next })} className="font-medium text-primary hover:underline">Create an account</Link></p>
     </div>

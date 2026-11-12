@@ -19,6 +19,7 @@ import {
   getCurrentSellerProfile,
 } from "@/lib/marketplace/sellers";
 import { createClient } from "@/lib/supabase/server";
+import { getPageUser } from "@/lib/auth/page-user";
 
 export const metadata: Metadata = {
   title: "Account",
@@ -33,25 +34,25 @@ export default async function AccountPage({
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getPageUser();
 
   if (!user) {
     redirect(signInPath("/account", "Please sign in to continue."));
   }
 
-  const { count: unreadCount, error: unreadCountError } = await supabase
+  const [unread, profileResult, sellerResult] = await Promise.all([supabase
     .from("notifications")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
-    .is("read_at", null);
-
-  const { data: profile } = await supabase
+    .is("read_at", null),
+    supabase
     .from("profiles")
     .select("display_name, handle, bio, avatar_url")
     .eq("id", user.id)
-    .maybeSingle();
-
-  const { data: sellerProfile } = await getCurrentSellerProfile();
+    .maybeSingle(), getCurrentSellerProfile()]);
+  const { count: unreadCount, error: unreadCountError } = unread;
+  const { data: profile } = profileResult;
+  const { data: sellerProfile } = sellerResult;
   const { data: sellerDecision } =
     sellerProfile
       ? await getCurrentSellerDecisionNotice()

@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { signUp } from "@/app/auth/actions";
 import { PasswordInput } from "@/components/auth/password-input";
 import { BackButton } from "@/components/navigation/back-button";
-import { Button } from "@/components/ui/button";
+import { VerifySubmitButton } from "@/components/auth/verify-submit-button";
+import { getPageUser } from "@/lib/auth/page-user";
 import { signedInDestination } from "@/lib/auth/destination";
 import { safeNextPath, withAuthParams } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
@@ -23,7 +24,7 @@ export default async function SignUpPage({
   const { error, next: requestedNext } = await searchParams;
   const next = safeNextPath(requestedNext);
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getPageUser();
 
   if (user) redirect(await signedInDestination(supabase, user, next));
 
@@ -38,7 +39,7 @@ export default async function SignUpPage({
         <label className="block text-sm font-medium" htmlFor="sign-up-email">Email<input id="sign-up-email" name="email" type="email" autoComplete="email" required className="mt-2 w-full rounded-md border bg-background px-3 py-2.5" /></label>
         <div><label className="block text-sm font-medium" htmlFor="sign-up-password">Password</label><PasswordInput id="sign-up-password" name="password" autoComplete="new-password" minLength={8} required /></div>
         <p className="text-xs text-muted-foreground">Use at least 8 characters.</p>
-        <Button type="submit" className="w-full">Create account</Button>
+        <VerifySubmitButton pendingText="Creating account…" className="w-full">Create account</VerifySubmitButton>
       </form>
       <p className="mt-6 text-center text-sm text-muted-foreground">Already have an account? <Link href={withAuthParams("/sign-in", { next })} className="font-medium text-primary hover:underline">Sign in</Link></p>
     </div>

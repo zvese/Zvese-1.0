@@ -68,8 +68,9 @@ test("marketplace combines URL search, active categories, secure availability ga
   const products = read("src/lib/marketplace/products.ts");
   const productPage = read("src/app/marketplace/[slug]/page.tsx");
 
-  assert.match(page, /name="q"/);
-  assert.match(page, /name="category"/);
+  const searchForm = read("src/components/marketplace/marketplace-search.tsx");
+  assert.match(searchForm, /name="q"/);
+  assert.match(searchForm, /name="category"/);
   assert.match(page, /marketplaceHref\(cat\.slug\)/);
   assert.match(page, /filterMarketplaceListings\(listings \?\? \[\], searchQuery, categorySlug\)/);
   assert.match(page, /disabled=\{!available\}/);

@@ -13,12 +13,11 @@ import {
 } from "@/components/ui/sheet";
 import { siteConfig } from "@/config/site";
 import { getCurrentSellerProfile } from "@/lib/marketplace/sellers";
-import { createClient } from "@/lib/supabase/server";
+import { getPageUser } from "@/lib/auth/page-user";
 import { cn } from "@/lib/utils";
 
 export async function Navbar() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getPageUser();
   const sellerProfile = user ? (await getCurrentSellerProfile()).data : null;
   const isActiveSeller = sellerProfile?.status === "active";
   const navLinks = [
